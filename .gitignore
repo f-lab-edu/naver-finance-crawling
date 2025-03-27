@@ -1,0 +1,15 @@
+# Python
+__paychache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+
+# Pycharm 설정 파일
+.idea/
+*.iml
+*.xml
+
+
+
