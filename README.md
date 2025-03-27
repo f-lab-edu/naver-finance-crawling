@@ -11,7 +11,7 @@
 ## 2. 개발 환경
 
 - IDE: `PyCharm`
-- 언어: Python 3.12
+- 언어: Python 3.10
 - 패키지: `requests`, `beautifulsoup4`, `playwright`
 - 데이터베이스: MySQL, MongoDB (적재방식 미정)
 - 형상관리: `git`, `github`
