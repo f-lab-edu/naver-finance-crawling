@@ -61,8 +61,6 @@ class NaverFinanceCrawler(Crawler):
 
         # 수집 할 페이지가 있을 동안 루프
         while True:
-            if page > 1:
-                break
             url: str = f"{self.BASE_URL}{query}{page}"  # 베이스URL + URL query + 페이지 번호
             html = self.fetch_html(url)
             if not html:
