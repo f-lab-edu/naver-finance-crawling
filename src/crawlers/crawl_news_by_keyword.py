@@ -196,19 +196,27 @@ def get_article_detail(url, press_name):
             published = soup.find("span", class_="txt01")
         elif "중앙일보" in press_name:
             body = soup.find("div", class_="article_body")
-            published = soup.find("p", class_="byline")
+            published = soup.find("p", class_="date")
         elif "조선일보" in press_name:
             body = soup.find("div", id="news_body_id")
-            published = soup.find("span", class_="date")
+            published = soup.find("span", class_="inputDate")
         elif "동아일보" in press_name:
             body = soup.find("div", class_="article_txt")
-            published = soup.find("span", class_="date01")
+            date_div = soup.find("div", id="dateInfo")
+            p_tag = date_div.find("p")
+            published = p_tag.find("span")
         elif "한겨레" in press_name:
             body = soup.find("div", class_="text")
-            published = soup.find("span", class_="date-time")
+            published = None
+            ul_tag = soup.find("ul", class_="ArticleDetailView_dateList__tniXJ")
+            li_tags = ul_tag.find_all("li")
+            for li in li_tags:
+                if "등록" in li.text:
+                    published = li.find("span")
         elif "경향신문" in press_name:
             body = soup.find("div", class_="text")
-            published = soup.find("span", class_="pubdate")
+            date_div = soup.find("div", class_="date")
+            published = date_div.find("p")
         elif "KBS" in press_name:
             body = soup.find("div", class_="text")
             published = soup.find("span", class_="date")
@@ -238,11 +246,20 @@ def get_article_detail(url, press_name):
             published = soup.find("span", class_="date")
 
         content = body.get_text(strip=True) if body else ""
+
         if published:
+            # 작성일 정보가 존재 할 경우에 텍스트 추출
             date_str = published.get_text(strip=True)
             try:
+                # 수집된 텍스트에 입력 혹은 작성 이라는 단어가 포함되어 있다면 제거 후 공백도 제거
+                if "입력" in date_str:
+                    date_str = date_str.replace("입력", "").strip()
+                elif "작성" in date_str:
+                    date_str = date_str.replace("작성", "").strip()
+                # 추출된 문자열 16자 까지 슬라이싱 후 포맷 변경
                 published_date = datetime.strptime(date_str[:16], "%Y.%m.%d %H:%M")
             except ValueError:
+                # 포맷이 잘못되어 파싱에 실패할 경우의 예외 처리
                 print(f"날짜 형식 파싱 실패: {date_str}")
                 published_date = None
         else:
