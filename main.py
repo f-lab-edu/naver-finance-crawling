@@ -1,53 +1,38 @@
 import streamlit as st
-import json
-import time
+from datetime import datetime, timedelta
+import pandas as pd
+from src.crawlers.crawl_news_by_keyword import crawl_news
 
-from src.crawlers.naver_finance_crawler import NaverFinanceCrawler
+st.set_page_config(page_title="네이버 뉴스 크롤러", layout="wide")
 
-if __name__ == "__main__":
-    st.set_page_config(
-        layout="wide",
-        page_title="네이버 금융 뉴스 수집"
-    )
-    st.markdown(
-        """
-        <h2>네이버 금융 뉴스 수집</h2>
-        <hr>
-        """,
-        unsafe_allow_html=True
-    )
+st.title("실시간 네이버 뉴스 크롤러")
+st.markdown("네이버 뉴스에서 검색 키워드에 따른 주요 언론사의 기사를 수집합니다.")
 
-    st.sidebar.header("설정")
-    url = st.sidebar.text_input("수집 URL", max_chars=300, placeholder="ex) https://abc.com")
-    tag = st.sidebar.text_input("HTML 태그입력", max_chars=300, placeholder="ex) a")
-    css_selector = st.sidebar.text_input("CSS 선택자 입력", max_chars=300, placeholder="ex) articleSubject")
-    collect_button = st.sidebar.button("데이터 수집")
+# 사이드 바: 수집 설정 값 입력
+st.sidebar.header("뉴스 수집 설정")
 
-    def collect_data(url: str, tag: str, selector: str):
-        if not url:
-            st.toast("수집할 페이지 URL을 입력해주세요!", icon="⚠️")
-        elif not tag:
-            st.toast("대상 HTML 태그를 입력해주세요!", icon="⚠️")
-        elif not selector:
-            st.toast("대상 CSS 선택자를 입력해주세요!", icon="⚠️")
-        else:
-            st.write(f"수집을 시작: {url}에서 수집중....")
-            
+keywords = st.sidebar.text_input("수집 키워드 (쉼표 구분)", value="삼성전자, 반도체")
 
+date_range = st.sidebar.date_input(
+    "수집기간을 선택해 주세요",
+    value=(datetime.today() - timedelta(days=1), datetime.today())
+)
 
-    if collect_button:
-        collect_data(url, tag, css_selector)
-    # 작업 시간 측정을 위해
-    # start_time = time.time()
-    # crawler = NaverFinanceCrawler()
-    # links = crawler.collect_news_links()
-    # print(f"총 {len(links)}개의 링크를 수집했습니다.")
-    #
-    # articles = crawler.crawl_articles(links)
-    # print(f"총 {len(json.loads(articles)['news'])}개의 기사를 수집했습니다.")
-    # print(articles)
-    #
-    # end_time = time.time()
-    #
-    # total_crawl_time = end_time - start_time
-    # print(f"수집이 완료되었습니다. 총 작업시간: {total_crawl_time:.2f}초")
+start_date = datetime.combine(date_range[0], datetime.min.time())
+end_date = datetime.combine(date_range[1], datetime.max.time())
+
+if st.sidebar.button("뉴스 수집"):
+    with st.spinner("뉴스를 수집 중입니다..."):
+        keyword_list = [kw.strip() for kw in keywords.split(",")]
+
+        collect_result = []
+
+        for keyword in keyword_list:
+            results = crawl_news(keyword, start_date, end_date)
+            collect_result.extend(results)
+
+        print(collect_result)
+        dataframe = pd.DataFrame(collect_result)
+        st.success(f"총 {len(dataframe)}건의 뉴스가 수집 되었습니다.")
+        st.dataframe(dataframe[["title", "press", "pub_date", "content"]])
+
