@@ -1,7 +1,14 @@
-import streamlit as st
+import asyncio
 from datetime import datetime, timedelta
+
 import pandas as pd
-from src.crawlers.crawl_news_by_keyword import crawl_news
+import streamlit as st
+
+from datetime import datetime, timedelta
+
+from src.utils.common import parse_date_range
+from src.crawlers.crawl_news_by_keyword_async import crawl_news
+# from src.crawlers.crawl_news_by_keyword_async import crawl_news
 
 st.set_page_config(page_title="네이버 뉴스 크롤러", layout="wide")
 
@@ -18,8 +25,7 @@ date_range = st.sidebar.date_input(
     value=(datetime.today() - timedelta(days=1), datetime.today())
 )
 
-start_date = datetime.combine(date_range[0], datetime.min.time())
-end_date = datetime.combine(date_range[1], datetime.max.time())
+start_date, end_date = parse_date_range(date_range=date_range)
 
 if st.sidebar.button("뉴스 수집"):
     with st.spinner("뉴스를 수집 중입니다..."):
@@ -28,11 +34,19 @@ if st.sidebar.button("뉴스 수집"):
         collect_result = []
 
         for keyword in keyword_list:
-            results = crawl_news(keyword, start_date, end_date)
+            results = asyncio.run(crawl_news(keyword, start_date, end_date))
             collect_result.extend(results)
 
         print(collect_result)
+
         dataframe = pd.DataFrame(collect_result)
         st.success(f"총 {len(dataframe)}건의 뉴스가 수집 되었습니다.")
-        st.dataframe(dataframe[["title", "press", "pub_date", "content"]])
+        if all(col in dataframe.columns for col in ["title", "press", "pub_date", "content"]):
+            st.dataframe(dataframe[["title", "press", "pub_date", "content"]])
+        else:
+            st.dataframe(dataframe)
+            st.error("필수 컬럼이 누락되었습니다. 로직을 다시 확인해주세요.")
+
+
+
 
