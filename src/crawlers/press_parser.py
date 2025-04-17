@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
 
+from src.utils.common import clean_datetime_string
+
 
 def parse_article_content(html, press_name):
     """
@@ -10,9 +12,6 @@ def parse_article_content(html, press_name):
     :return:
     """
     soup = BeautifulSoup(html, "html.parser")
-
-    body, published_date = None, None
-
     try:
         if "연합뉴스" in press_name:
             body = soup.find(id="articleWrap")
@@ -20,6 +19,7 @@ def parse_article_content(html, press_name):
         elif "중앙일보" in press_name:
             body = soup.find("div", class_="article_body")
             published = soup.find("p", class_="date")
+            published = published.find("time")
         elif "조선일보" in press_name:
             body = soup.find("div", id="news_body_id")
             published = soup.find("span", class_="inputDate")
@@ -36,28 +36,32 @@ def parse_article_content(html, press_name):
                         published = li.find("span")
         elif "경향신문" in press_name:
             body = soup.find("div", class_="text")
-            published = soup.find("div", class_="date").find("p")
-        elif press_name in ["KBS", "MBC", "YTN"]:
-            body = soup.find("div", class_="text")
-            published = soup.find("span", class_="date")
+            p_tag = soup.find("div", class_="date").find("p")
+            if "입력" in p_tag.get_text(strip=True):
+                published = p_tag
+        elif "MBC" in press_name:
+            body = soup.find("div", class_="news_txt")
+            div_tag = soup.find("div", class_="date")
+            published = div_tag.find("span")
+        elif "YTN" in press_name:
+            body = soup.find("div", id="CmAdContent")
+            published = soup.find("div", class_="date")
+        elif "KBS" in press_name:
+            body = soup.find("div", id="cont_newstext")
+            published = soup.find("em", class_="input-date")
         elif "SBS" in press_name:
-            body = soup.find("div", class_="text")
-            published = soup.find("span", class_="date-published")
+            body = soup.find("div", class_="main_text").find("div", class_="text_area")
+            date_area = soup.find("div", class_="date_area")
+            published = date_area.find("span")
         elif "한국경제" in press_name:
-            body = soup.find("div", class_="article-body-wrap")
-            published = soup.find("span", class_="txt-date")
+            body = soup.find("div", id="articletxt")
+            published = soup.find("div", class_="datetime").find("span")
         elif "매일경제" in press_name:
-            body = soup.find("div", class_="text")
-            published = soup.find("span", class_="lasttime")
+            body = soup.find("div", class_="news_cnt_detail_wrap")
+            published = soup.find("dl", class_="registration").find("dd")
         elif "머니투데이" in press_name:
-            body = soup.find("div", class_="text")
-            published = soup.find("span", class_="date")
-        elif "뉴스1" in press_name:
-            body = soup.find("div", class_="text")
-            published = soup.find("span", class_="article_date")
-        elif "뉴시스" in press_name:
-            body = soup.find("div", class_="text")
-            published = soup.find("span", class_="date")
+            body = soup.find("div", class_="view_text").find("div", id="textBody")
+            published = soup.find("li", class_="date").find("time")
 
         content = body.get_text(strip=True) if body else ""
         published_date = _parse_date(published.get_text(strip=True)) if published else ""
@@ -78,12 +82,16 @@ def _parse_date(date_str):
     :return:
     """
     try:
-        if "입력" in date_str:
-            date_str = date_str.replace("입력", "").strip()
-        elif "작성" in date_str:
-            date_str = date_str.replace("작성", "").strip()
-
-        return datetime.strptime(date_str[:16], "%Y.%m.%d %H:%M")
+        for word in ["입력", "작성", "수정"]:
+            date_str = date_str.replace(word, "")
+        date_str = clean_datetime_string(date_str)
+        if "오전" in date_str or "오후" in date_str:
+            date_str = date_str.replace("오전", "AM").replace("오후", "PM")
+            date = datetime.strptime(date_str, "%Y%m%d %p %I:%M")
+        else:
+            date = datetime.strptime(date_str[:13], "%Y%m%d %H:%M")
+        return date
     except ValueError as e:
-        print(f"[Error] 날짜 파싱 실패 ({date_str})")
+        print(f"[Error] 날짜 파싱 실패 ({date_str} - {e})")
         return None
+
