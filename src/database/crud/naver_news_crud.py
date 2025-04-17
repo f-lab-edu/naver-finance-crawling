@@ -47,3 +47,21 @@ def save_articles_bulk(db, articles):
         print(f"[DB Error] bulk insert에 실패했습니다: {e}")
 
 
+def get_all_articles(db, limit=10):
+    """
+    모든 수집된 기사 조회
+    :param db: db세션
+    :param limit: 반환할 기사 수
+    :return:
+    """
+    try:
+        articles = db.query(NaverNews).limit(limit).all()
+        return articles
+    except Exception as e:
+        print(f"[DB Error] 모든 기사 조회 실패 - {e}")
+        return []
+
+
+
+
+
